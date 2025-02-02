@@ -1,0 +1,89 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local player = Players.LocalPlayer
+
+-- Создаем парту
+local desk = Instance.new("Part")
+desk.Name = "SmartDesk"
+desk.Size = Vector3.new(4, 2, 2)
+desk.Color = Color3.new(0.2, 0.8, 0.4)
+desk.Material = Enum.Material.Neon
+desk.Anchored = false
+desk.CanCollide = true
+
+-- Физические компоненты
+local bodyVelocity = Instance.new("BodyVelocity")
+bodyVelocity.MaxForce = Vector3.new(4000, 0, 4000)
+bodyVelocity.P = 1000
+
+local bodyGyro = Instance.new("BodyGyro")
+bodyGyro.MaxTorque = Vector3.new(4000, 4000, 4000)
+
+bodyVelocity.Parent = desk
+bodyGyro.Parent = desk
+desk.Parent = workspace
+
+-- Настройки
+local BASE_SPEED = 18
+local MAX_DISTANCE = 15
+local WANDER_STRENGTH = 0.3 -- Сила случайных отклонений (0-1)
+
+-- Основной цикл
+RunService.Heartbeat:Connect(function()
+    if not player.Character then return end
+    local rootPart = player.Character:FindFirstChild("HumanoidRootPart")
+    if not rootPart or not desk.Parent then return end
+
+    -- Рассчитываем направление к игроку
+    local toPlayer = (rootPart.Position - desk.Position)
+    local distance = toPlayer.Magnitude
+    local baseDirection = toPlayer.Unit
+
+    -- Добавляем случайное отклонение
+    local wanderDirection = Vector3.new(
+        math.random(-100, 100)/100 * WANDER_STRENGTH,
+        0,
+        math.random(-100, 100)/100 * WANDER_STRENGTH
+    ).Unit
+
+    -- Комбинируем направления
+    local finalDirection = (baseDirection + wanderDirection).Unit
+    
+    -- Адаптивная скорость
+    local speed = BASE_SPEED * math.clamp(distance/MAX_DISTANCE, 0.5, 2)
+
+    -- Применяем движение
+    bodyVelocity.Velocity = finalDirection * speed
+    bodyGyro.CFrame = CFrame.lookAt(desk.Position, desk.Position + finalDirection)
+
+    -- Коррекция высоты
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterDescendantsInstances = {desk}
+    
+    local ray = workspace:Raycast(
+        desk.Position + Vector3.new(0, 5, 0),
+        Vector3.new(0, -10, 0),
+        raycastParams
+    )
+    
+    if ray then
+        desk.Position = Vector3.new(
+            desk.Position.X,
+            ray.Position.Y + desk.Size.Y/2,
+            desk.Position.Z
+        )
+    end
+end)
+
+-- Визуал только для игрока
+if desk:IsA("BasePart") then
+    desk.LocalTransparencyModifier = 0.3
+    local highlight = Instance.new("Highlight")
+    highlight.FillColor = Color3.new(0, 1, 0.5)
+    highlight.Parent = desk
+end
+
+-- Очистка при выходе
+game:GetService("UserInputService").WindowFocusReleased:Connect(function()
+    desk:Destroy()
+end)
