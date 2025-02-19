@@ -199,7 +199,7 @@ local function autoFindWorld2()
 end
 
 local ToggleWorld2 = Tab:CreateToggle({
-    Name = "Auto Find Button (World 2)",
+    Name = "Don't work. Auto Find Button (World 2)",
     CurrentValue = false,
     Flag = "FindFlag2",
     Callback = function(Value)
