@@ -176,18 +176,48 @@ local ToggleWorld1 = Tab:CreateToggle({
     end,
 })
 
+local autoFindWorld2Running = false
+
+local function autoFindWorld2()
+    local player = game.Players.LocalPlayer
+    for i = 1, 51 do
+        if not autoFindWorld2Running then break end
+        
+        local level = game.Workspace.Levels2:FindFirstChild(tostring(i))
+        if level then
+            local button = level:FindFirstChild("Button")
+            if button then
+                local clickDetector = button:FindFirstChildWhichIsA("ClickDetector")
+                if clickDetector then
+                    fireclickdetector(clickDetector)
+                    wait(1) -- Задержка между уровнями
+                end
+            end
+        end
+    end
+    autoFindWorld2Running = false
+end
+
 local ToggleWorld2 = Tab:CreateToggle({
-    Name = "Coming Soon.  Auto Find Button (World 2)",
+    Name = "Auto Find Button (World 2)",
     CurrentValue = false,
     Flag = "FindFlag2",
     Callback = function(Value)
-        -- Функционал для World 2 будет добавлен позже
+        if Value then
+            if not autoFindWorld2Running then
+                autoFindWorld2Running = true
+                spawn(autoFindWorld2)
+            end
+        else
+            autoFindWorld2Running = false
+        end
     end,
 })
 
 ----------------------------------------------------------------
 -- Авто-тайкун для Level 69 (с полным прохождением TPModel)
 ----------------------------------------------------------------
+
 local Tab = Window:CreateTab("Auto Secret Tab", 4483362458)
 
 local autoTycoonRunning = false
@@ -249,7 +279,6 @@ local function autoTycoon()
     -- Проверяем, исчезла ли кнопка "Buy ??? - 9,999"
     local lastUpgrade = buttons:FindFirstChild("Buy ??? - 9,999")
     if lastUpgrade then
-        warn("Последняя кнопка не исчезла! Повторяем заново...")
         autoTycoon()
         return
     end
@@ -299,11 +328,11 @@ local function autoTycoon()
     end
 end
 
--- Toggle для Auto Secret 1 (Level 69)
+-- Toggle для Auto Tycoon (Level 69)
 local ToggleTycoon = Tab:CreateToggle({
-    Name = "Auto Secret 1 (Level 69)",
+    Name = "Auto Tycoon (Level 69)",
     CurrentValue = false,
-    Flag = "SecretFlag",
+    Flag = "TycoonFlag",
     Callback = function(Value)
         if Value then
             if not autoTycoonRunning then
@@ -321,8 +350,7 @@ local function teleportToGift()
         player.CharacterAdded:Wait() -- Ждем загрузки персонажа
     end
     local character = player.Character
-    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-
+    local humanoidRootPart = character:WaitForChild("HumanoidRootPart", 5)
     if not humanoidRootPart then
         warn("HumanoidRootPart не найден!")
         return
@@ -341,18 +369,45 @@ local function teleportToGift()
     end
 
     local gift = levelFolder:FindFirstChild("Gift")
-    if not gift or not gift:IsA("BasePart") then
-        warn("Gift не найден или не является BasePart!")
+    if not gift then
+        warn("Gift не найден!")
         return
     end
 
-    -- Используем безопасный способ установки CFrame
-    humanoidRootPart.CFrame = CFrame.new(gift.Position + Vector3.new(0, 3, 0))
-    print("Телепортирован к Gift в Secret/2")
+    local giftPart = nil
+    if gift:IsA("BasePart") then
+        giftPart = gift
+    elseif gift:IsA("Model") then
+        giftPart = gift:FindFirstChildWhichIsA("BasePart")
+    end
+
+    if not giftPart then
+        warn("Не найден BasePart в Gift!")
+        return
+    end
+
+    -- Используем MoveTo для надежного перемещения персонажа
+    character:MoveTo(giftPart.Position + Vector3.new(0, 3, 0))
+    wait(1) -- Ждем, чтобы MoveTo сработал
+    print("Телепортирован к Gift в Secret/2, позиция: " .. tostring(giftPart.Position))
 end
 
 local Button = Tab:CreateButton({
     Name = "Auto Secret 2 (Level 20)",
+    Callback = function()
+        teleportToGift()
+    end,
+})
+
+local Button = Tab:CreateButton({
+    Name = "Don't work.  Auto Secret 1 (World 2 Level 50)",
+    Callback = function()
+        teleportToGift()
+    end,
+})
+
+local Button = Tab:CreateButton({
+    Name = "Auto Secret 2 (World 2 Level 20)",
     Callback = function()
         teleportToGift()
     end,
