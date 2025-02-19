@@ -185,15 +185,6 @@ local ToggleWorld2 = Tab:CreateToggle({
     end,
 })
 
-local ToggleWorld3 = Tab:CreateToggle({
-    Name = "Coming Soon.  Auto Find Button (World 3)",
-    CurrentValue = false,
-    Flag = "FindFlag3",
-    Callback = function(Value)
-        -- Функционал для World 3 будет добавлен позже
-    end,
-})
-
 ----------------------------------------------------------------
 -- Функция получения суммы денег из модели Total Cash
 ----------------------------------------------------------------
