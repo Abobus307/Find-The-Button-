@@ -47,7 +47,7 @@ Rayfield:Notify({
 local Window = Rayfield:CreateWindow({
     Name = "Find The Button Script by Вася2",
     Icon = 0,
-    LoadingTitle = "Find The Button script game",
+    LoadingTitle = "Find The Button Script",
     LoadingSubtitle = "By Вася2",
     Theme = "Default",
 
