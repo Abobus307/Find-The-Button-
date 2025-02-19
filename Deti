@@ -186,142 +186,124 @@ local ToggleWorld2 = Tab:CreateToggle({
 })
 
 ----------------------------------------------------------------
--- Функция получения суммы денег из модели Total Cash
+-- Авто-тайкун для Level 69 (с полным прохождением TPModel)
 ----------------------------------------------------------------
-local function getTotalCash(buttons)
-    for _, child in ipairs(buttons:GetChildren()) do
-        if child:IsA("Model") and child.Name:find("Total Cash") then
-            local cashStr = child.Name:match("Total Cash:%s*([%d,]+)")
-            if cashStr then
-                cashStr = cashStr:gsub(",", "")
-                return tonumber(cashStr) or 0
-            end
-        end
-    end
-    return 0
-end
+local Tab = Window:CreateTab("Auto Secret Tab", 4483362458)
 
-----------------------------------------------------------------
--- Функция автотайкуна для Level 69:
--- Скрипт выводит в консоль баланс, затем последовательно телепортируется к каждой кнопке:
--- 1. Buy Money Dropper - 0
--- 2. Buy Upgrader - 100
--- 3. Buy Upgrader - 250
--- 4. Buy Upgrader - 500
--- 5. Buy ??? - 9,999
--- После покупки последнего скрипт телепортируется к подарку (Buy Gift).
--- После каждой покупки делается пауза в 3 секунды.
-----------------------------------------------------------------
 local autoTycoonRunning = false
 
 local function autoTycoon()
     autoTycoonRunning = true
     local levelsFolder = game.Workspace:WaitForChild("Levels")
     local level69 = levelsFolder:FindFirstChild("69")
-    if not level69 then
-        print("Уровень 69 не найден")
-        autoTycoonRunning = false
-        return
-    end
-    local levelFolder = level69:FindFirstChild("Level")
-    if not levelFolder then
-        print("Папка Level не найдена в уровне 69")
-        autoTycoonRunning = false
-        return
-    end
-    local tycoon = levelFolder:FindFirstChild("Tycoon")
-    if not tycoon then
-        print("Модель Tycoon не найдена в папке Level уровня 69")
-        autoTycoonRunning = false
-        return
-    end
-    local buttons = tycoon:FindFirstChild("Buttons")
-    if not buttons then
-        print("Папка Buttons не найдена в модели Tycoon")
-        autoTycoonRunning = false
-        return
-    end
+    if not level69 then return end
 
-    -- Список улучшений в порядке покупки (без подарка)
+    local levelFolder = level69:FindFirstChild("Level")
+    if not levelFolder then return end
+
+    local tycoon = levelFolder:FindFirstChild("Tycoon")
+    if not tycoon then return end
+
+    local buttons = tycoon:FindFirstChild("Buttons")
+    if not buttons then return end
+
+    local player = game.Players.LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+    local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+
+    -- Кнопки в нужном порядке
     local upgrades = {
-         "Buy Money Dropper - 0",
-         "Buy Upgrader - 100",
-         "Buy Upgrader - 250",
-         "Buy Upgrader - 500",
-         "Buy ??? - 9,999"
+        "Buy Money Dropper - 0",
+        "Buy Upgrader - 100",
+        "Buy Upgrade - 250",
+        "Buy Upgrade - 500",
+        "Buy ??? - 9,999"
     }
 
-    local upgradeIndex = 1
-    local player = game.Players.LocalPlayer
+    for _, upgradeName in ipairs(upgrades) do
+        if not autoTycoonRunning then return end
 
-    while autoTycoonRunning and upgradeIndex <= #upgrades do
-        -- Выводим баланс (функция getTotalCash должна быть определена ранее)
-        local cash = getTotalCash(buttons)
-        print("Доступно денег: " .. cash)
-        
-        local currentUpgrade = upgrades[upgradeIndex]
-        local upgradeModel = buttons:FindFirstChild(currentUpgrade)
+        local upgradeModel = buttons:FindFirstChild(upgradeName)
+
+        -- Если кнопки нет, ждем её появления
+        local waitTime = 0
+        while not upgradeModel and waitTime < 10 do
+            wait(1)
+            waitTime = waitTime + 1
+            upgradeModel = buttons:FindFirstChild(upgradeName)
+        end
+
         if upgradeModel then
             local part = upgradeModel:FindFirstChildWhichIsA("BasePart")
             if part then
-                player.Character:SetPrimaryPartCFrame(part.CFrame)
-                wait(0.5)
-                local cd = part:FindFirstChildOfClass("ClickDetector")
-                if cd then
-                    if typeof(fireclickdetector) == "function" then
-                        fireclickdetector(cd)
-                    else
-                        cd.MouseClick:Fire(player)
-                    end
-                    print("Куплено: " .. currentUpgrade)
-                    wait(3)  -- пауза 3 секунды после покупки
-                    upgradeIndex = upgradeIndex + 1  -- переходим к следующему улучшению
-                else
-                    print("ClickDetector не найден у " .. currentUpgrade)
-                end
+                humanoidRootPart.CFrame = part.CFrame
+                wait(2) -- Ждем 2 секунды перед следующим телепортом
             else
-                print("Часть (BasePart) не найдена в " .. currentUpgrade)
+                warn("Не найден BasePart у кнопки: " .. upgradeName)
             end
         else
-            print("Модель " .. currentUpgrade .. " отсутствует (возможно, уже куплена), переходим к следующему")
-            upgradeIndex = upgradeIndex + 1
+            warn("Кнопка " .. upgradeName .. " не появилась!")
         end
     end
 
-    -- После покупки всех улучшений, переходим к подарку
-    local giftModel = buttons:FindFirstChild("Gift")
-    if giftModel then
-        local part = giftModel:FindFirstChildWhichIsA("BasePart")
-        if part then
-            player.Character:SetPrimaryPartCFrame(part.CFrame)
-            wait(0.5)
-            local cd = part:FindFirstChildOfClass("ClickDetector")
-            if cd then
-                if typeof(fireclickdetector) == "function" then
-                    fireclickdetector(cd)
-                else
-                    cd.MouseClick:Fire(player)
-                end
-                print("Куплен подарок")
-            else
-                print("ClickDetector не найден у подарка")
+    -- Проверяем, исчезла ли кнопка "Buy ??? - 9,999"
+    local lastUpgrade = buttons:FindFirstChild("Buy ??? - 9,999")
+    if lastUpgrade then
+        warn("Последняя кнопка не исчезла! Повторяем заново...")
+        autoTycoon()
+        return
+    end
+
+    -- Телепортируемся к TPModel.Trigger
+    local tpModel = levelFolder:FindFirstChild("TPModel")
+    if tpModel then
+        local trigger = tpModel:FindFirstChild("Trigger")
+        if trigger and trigger:IsA("BasePart") then
+            -- Перемещаем игрока немного выше триггера
+            humanoidRootPart.CFrame = trigger.CFrame + Vector3.new(0, 3, 0)
+            wait(0.5) -- Ждем чуть-чуть, чтобы телепорт сработал
+
+            -- **СОЗДАЁМ КАСАНИЕ, ЧТОБЫ ТРИГГЕР СРАБОТАЛ**
+            firetouchinterest(humanoidRootPart, trigger, 0) -- Начинаем касание
+            wait(0.2)
+            firetouchinterest(humanoidRootPart, trigger, 1) -- Завершаем касание
+
+            wait(2) -- Даем время на телепортацию
+
+            -- Проверяем, действительно ли игрок телепортировался
+            local oldPosition = humanoidRootPart.Position
+            wait(1)
+            if (humanoidRootPart.Position - oldPosition).magnitude < 5 then
+                warn("Триггер не сработал! Пробуем еще раз...")
+                firetouchinterest(humanoidRootPart, trigger, 0)
+                wait(0.5)
+                firetouchinterest(humanoidRootPart, trigger, 1)
+                wait(2)
             end
         else
-            print("Часть (BasePart) не найдена у подарка")
+            warn("Не найден Trigger в TPModel!")
+            return
         end
     else
-        print("Модель подарка отсутствует")
+        warn("Не найден TPModel!")
+        return
     end
 
-    print("Все улучшения и подарок куплены, скрипт завершён")
-    autoTycoonRunning = false
+    -- Телепортируемся к Gift
+    local gift = levelFolder:FindFirstChild("Gift")
+    if gift and gift:IsA("BasePart") then
+        humanoidRootPart.CFrame = gift.CFrame
+        autoTycoonRunning = false -- Завершаем работу скрипта
+    else
+        warn("Не найден подарок!")
+    end
 end
 
--- Toggle для Auto Tycoon (Level 69)
+-- Toggle для Auto Secret 1 (Level 69)
 local ToggleTycoon = Tab:CreateToggle({
-    Name = "Bugged.  Auto Tycoon (Level 69)",
+    Name = "Auto Secret 1 (Level 69)",
     CurrentValue = false,
-    Flag = "TycoonFlag",
+    Flag = "SecretFlag",
     Callback = function(Value)
         if Value then
             if not autoTycoonRunning then
@@ -330,5 +312,48 @@ local ToggleTycoon = Tab:CreateToggle({
         else
             autoTycoonRunning = false
         end
+    end,
+})
+
+local function teleportToGift()
+    local player = game.Players.LocalPlayer
+    if not player.Character then
+        player.CharacterAdded:Wait() -- Ждем загрузки персонажа
+    end
+    local character = player.Character
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+
+    if not humanoidRootPart then
+        warn("HumanoidRootPart не найден!")
+        return
+    end
+
+    local secretFolder = game.Workspace:FindFirstChild("Secret")
+    if not secretFolder then
+        warn("Папка Secret не найдена!")
+        return
+    end
+
+    local levelFolder = secretFolder:FindFirstChild("2")
+    if not levelFolder then
+        warn("Папка 2 в Secret не найдена!")
+        return
+    end
+
+    local gift = levelFolder:FindFirstChild("Gift")
+    if not gift or not gift:IsA("BasePart") then
+        warn("Gift не найден или не является BasePart!")
+        return
+    end
+
+    -- Используем безопасный способ установки CFrame
+    humanoidRootPart.CFrame = CFrame.new(gift.Position + Vector3.new(0, 3, 0))
+    print("Телепортирован к Gift в Secret/2")
+end
+
+local Button = Tab:CreateButton({
+    Name = "Auto Secret 2 (Level 20)",
+    Callback = function()
+        teleportToGift()
     end,
 })
