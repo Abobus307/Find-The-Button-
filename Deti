@@ -69,7 +69,7 @@ local Window = Rayfield:CreateWindow({
     }
 })
 
-local Tab = Window:CreateTab("Auto Find Button Tab", 4483362458)
+local Tab = Window:CreateTab("Auto Find Button", 4483362458) -- Title, Image
 
 ----------------------------------------------------------------
 -- Функция safeClickWithTimeout: запускает клик в отдельном корутине
@@ -176,30 +176,64 @@ local ToggleWorld1 = Tab:CreateToggle({
     end,
 })
 
+----------------------------------------------------------------
+-- Авто-нахождение и нажатие кнопок во втором мире (уровни 1-51)
+----------------------------------------------------------------
 local autoFindWorld2Running = false
 
 local function autoFindWorld2()
+    local levelsFolder = game.Workspace:WaitForChild("Levels", 5)
+    if not levelsFolder then
+        warn("Папка Levels не найдена!")
+        return
+    end
+
+    local delayBetweenClicks = 1  -- Задержка между уровнями (сек)
     local player = game.Players.LocalPlayer
+
     for i = 1, 51 do
         if not autoFindWorld2Running then break end
+
+        print("=== Обрабатывается уровень: " .. i .. " (World 2) ===")
+        local startTime = tick()
         
-        local level = game.Workspace.Levels2:FindFirstChild(tostring(i))
-        if level then
-            local button = level:FindFirstChild("Button")
-            if button then
-                local clickDetector = button:FindFirstChildWhichIsA("ClickDetector")
-                if clickDetector then
-                    fireclickdetector(clickDetector)
-                    wait(1) -- Задержка между уровнями
+        local levelFolder = levelsFolder:FindFirstChild(tostring(i))
+        if not levelFolder then
+            print("Папка уровня " .. i .. " не найдена в Levels")
+        else
+            local buttonModel = levelFolder:FindFirstChild("ButtonModel")
+            if not buttonModel then
+                print("ButtonModel не найден на уровне " .. i .. " в Levels")
+            else
+                local button = buttonModel:FindFirstChild("Button")
+                if not button then
+                    print("Button не найден в ButtonModel на уровне " .. i .. " в Levels")
+                else
+                    local clickDetector = button:FindFirstChild("ClickDetector")
+                    if not clickDetector then
+                        print("ClickDetector не найден в Button на уровне " .. i .. " в Levels")
+                    else
+                        print("Нажимаем кнопку на уровне " .. i .. " (World 2)")
+                        fireclickdetector(clickDetector)
+                        print("Кнопка успешно нажата на уровне " .. i .. " (World 2)")
+                    end
                 end
             end
         end
+        
+        local elapsed = tick() - startTime
+        print("Уровень " .. i .. " (World 2) обработан за " .. string.format("%.2f", elapsed) .. " сек.")
+        if elapsed < delayBetweenClicks then
+            wait(delayBetweenClicks - elapsed)
+        end
     end
+
+    print("Скрипт для World 2 завершил работу.")
     autoFindWorld2Running = false
 end
 
 local ToggleWorld2 = Tab:CreateToggle({
-    Name = "Don't work. Auto Find Button (World 2)",
+    Name = "Auto Find Button (World 2)",
     CurrentValue = false,
     Flag = "FindFlag2",
     Callback = function(Value)
@@ -328,11 +362,11 @@ local function autoTycoon()
     end
 end
 
--- Toggle для Auto Tycoon (Level 69)
+-- Toggle для Secret Tycoon (Level 69)
 local ToggleTycoon = Tab:CreateToggle({
-    Name = "Auto Tycoon (Level 69)",
+    Name = "Auto Secret 1 (World 1 Level 69)",
     CurrentValue = false,
-    Flag = "TycoonFlag",
+    Flag = "SecretFlag",
     Callback = function(Value)
         if Value then
             if not autoTycoonRunning then
@@ -393,7 +427,7 @@ local function teleportToGift()
 end
 
 local Button = Tab:CreateButton({
-    Name = "Auto Secret 2 (Level 20)",
+    Name = "Auto Secret 2 (World 1 Level 20)",
     Callback = function()
         teleportToGift()
     end,
